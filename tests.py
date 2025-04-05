@@ -126,3 +126,63 @@ def test_create_choice_with_invalid_text():
         Choice(id=1, text='')
     with pytest.raises(Exception):
         Choice(id=1, text='a'*101)
+
+@pytest.fixture
+def multiple_choice_question():
+    question = Question(title="Multiple choice question", points=10, max_selections=3)
+    choice1 = question.add_choice("First option", True)
+    choice2 = question.add_choice("Second option", False)
+    choice3 = question.add_choice("Third option", True)
+    choice4 = question.add_choice("Fourth option", False)
+    return {
+        "question": question,
+        "choices": [choice1, choice2, choice3, choice4],
+        "correct_choices": [choice1, choice3]
+    }
+
+@pytest.fixture
+def single_choice_question():
+    question = Question(title="Single choice question", points=5, max_selections=1)
+    choice1 = question.add_choice("Option A", False)
+    choice2 = question.add_choice("Option B", True)
+    choice3 = question.add_choice("Option C", False)
+    return {
+        "question": question,
+        "choices": [choice1, choice2, choice3],
+        "correct_choice": choice2
+    }
+
+def test_correct_choice_selection_with_fixture(multiple_choice_question):
+    question = multiple_choice_question["question"]
+    choices = multiple_choice_question["choices"]
+    correct_choices = multiple_choice_question["correct_choices"]
+    
+    correct_choice_ids = [choice.id for choice in correct_choices]
+    
+    selected = question.select_choices(correct_choice_ids)
+    
+    assert len(selected) == len(correct_choice_ids)
+    for id in correct_choice_ids:
+        assert id in selected
+
+def test_max_selections_with_fixture(single_choice_question):
+    question = single_choice_question["question"]
+    choices = single_choice_question["choices"]
+    
+    with pytest.raises(Exception, match=f"Cannot select more than {question.max_selections} choices"):
+        question.select_choices([choice.id for choice in choices])
+    
+    correct_choice = single_choice_question["correct_choice"]
+    selected = question.select_choices([correct_choice.id])
+    assert len(selected) == 1
+    assert selected[0] == correct_choice.id
+
+def test_points_configuration_with_fixtures(multiple_choice_question, single_choice_question):
+    multi_question = multiple_choice_question["question"]
+    single_question = single_choice_question["question"]
+    
+    assert multi_question.points == 10
+    assert single_question.points == 5
+    
+    assert 1 <= multi_question.points <= 100
+    assert 1 <= single_question.points <= 100
